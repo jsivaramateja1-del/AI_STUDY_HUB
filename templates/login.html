@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Study Hub — Login</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="auth-page">
+  <!-- Custom Cursor -->
+  <div class="cursor-dot" id="cursorDot" aria-hidden="true"></div>
+  <div class="cursor-ring" id="cursorRing" aria-hidden="true"></div>
+
+  <!-- Neural Cosmos Background -->
+  <div class="nc-bg" aria-hidden="true">
+    <div class="nc-grid"></div>
+    <div class="nc-blob nc-blob-1"></div>
+    <div class="nc-blob nc-blob-2"></div>
+    <div class="nc-blob nc-blob-3"></div>
+    <div class="nc-scan"></div>
+    <div class="nc-particles"></div>
+  </div>
+
+  <div class="auth-wrap">
+    <!-- LEFT PANEL: Feature list (unchanged) -->
+    <aside class="panel-left" aria-label="Product features">
+      <div class="panel-inner">
+        <div class="brand">
+          <div class="brand-mark"><span class="brand-icon">⚡</span></div>
+          <span class="brand-name">AI_STUDY_HUB</span>
+        </div>
+        <div>
+          <h1 class="hero-h1">
+            <span class="glitch" data-text="Study">Study</span><br>
+            <span class="neon-cyan">smarter.</span>
+          </h1>
+          <p class="hero-sub">Your AI-powered academic companion. Summarize, quiz, chat and master any topic in minutes — not hours.</p>
+        </div>
+        <ul class="feat-list" role="list">
+          <li><a href="/feature/summarizer" class="feat-row feat-row--d1"><span class="feat-emoji">🧠</span><div><strong>AI Summarizer</strong><p>Turn pages of notes into sharp bullet points</p></div><span class="feat-arrow">›</span></a></li>
+          <li><a href="/feature/pdf" class="feat-row feat-row--d2"><span class="feat-emoji">📄</span><div><strong>PDF Extractor</strong><p>Upload any PDF, get structured study notes</p></div><span class="feat-arrow">›</span></a></li>
+          <li><a href="/feature/chatbot" class="feat-row feat-row--d3"><span class="feat-emoji">🤖</span><div><strong>AI Chatbot</strong><p>24/7 study assistant, always ready to help</p></div><span class="feat-arrow">›</span></a></li>
+          <li><a href="/feature/quiz" class="feat-row feat-row--d4"><span class="feat-emoji">📝</span><div><strong>Quiz Generator</strong><p>Auto-generate MCQs from any content</p></div><span class="feat-arrow">›</span></a></li>
+          <li><a href="/feature/analyzer" class="feat-row feat-row--d5"><span class="feat-emoji">🔍</span><div><strong>Content Analyzer</strong><p>Keywords, key points &amp; difficulty rating</p></div><span class="feat-arrow">›</span></a></li>
+          <li><a href="/feature/performance" class="feat-row feat-row--d6"><span class="feat-emoji">📊</span><div><strong>My Performance</strong><p>Quiz analytics and trend charts</p></div><span class="feat-arrow">›</span></a></li>
+        </ul>
+        <div class="pill-row">
+          <span class="pill">6 AI Tools</span>
+          <span class="pill">OTP Verified</span>
+          <span class="pill">Free Access</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- RIGHT PANEL: Login Form -->
+    <main class="panel-right">
+      <div class="form-card tilt-card holo">
+        <div class="form-hd">
+          <h2 class="form-title">Welcome back</h2>
+          <p class="form-sub">// sign in to your account</p>
+        </div>
+
+        <!-- Flash messages -->
+        {% if error %}
+        <div class="nc-alert nc-alert--error" role="alert">
+          <span>⚠</span> {{ error }}
+        </div>
+        {% endif %}
+        {% if success %}
+        <div class="nc-alert nc-alert--success" role="alert">
+          <span>✓</span> {{ success }}
+        </div>
+        {% endif %}
+
+        <form action="/login" method="POST" class="auth-form" id="loginForm" novalidate>
+          <!-- Email field -->
+          <div class="field">
+            <label for="loginEmail" class="field-label">// email address</label>
+            <div class="field-wrap">
+              <svg class="field-ico" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"/>
+                <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"/>
+              </svg>
+              <input type="email" id="loginEmail" name="email" class="field-input"
+                     placeholder="you@example.com" required autocomplete="email">
+            </div>
+          </div>
+
+          <!-- Password field (hidden bullets) -->
+          <div class="field">
+            <label for="loginPw" class="field-label">// password</label>
+            <div class="field-wrap">
+              <svg class="field-ico" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/>
+              </svg>
+              <input type="password" id="loginPw" name="password" class="field-input"
+                     placeholder="••••••••" required autocomplete="current-password">
+            </div>
+          </div>
+
+          <!-- VERIFICATION CODE SECTION: code displayed above, input below (visible text) -->
+          <div class="verification-section">
+            <div class="code-display-box">
+              <span class="code-label">Verification Code:</span>
+              <strong class="verification-code-display">{{ verification_code }}</strong>
+            </div>
+            <div class="code-input-box">
+              <input type="text" name="verification_code" class="verification-input captcha-ans-uppercase"
+                     placeholder="Enter the code above" required autocomplete="off">
+            </div>
+          </div>
+
+          <!-- Submit button -->
+          <button type="submit" class="btn-submit" id="loginBtn">
+            <span class="btn-label">Sign In</span>
+            <span class="btn-arrow">→</span>
+            <span class="btn-loader" aria-hidden="true"></span>
+          </button>
+        </form>
+
+        <div class="forgot-row">
+          <a href="/forgot-password" class="forgot-link">Forgot password?</a>
+        </div>
+        <p class="switch-txt">Don't have an account? <a href="/signup">Create one free →</a></p>
+      </div>
+    </main>
+  </div>
+
+  <script src="/static/script.js"></script>
+  <script>
+    // Show loader on form submit
+    document.getElementById('loginForm').addEventListener('submit', function() {
+      var btn = document.getElementById('loginBtn');
+      var loader = btn.querySelector('.btn-loader');
+      var label = btn.querySelector('.btn-label');
+      var arrow = btn.querySelector('.btn-arrow');
+      if (loader) loader.classList.add('active');
+      if (label) label.textContent = 'Signing in...';
+      if (arrow) arrow.textContent = '';
+      btn.disabled = true;
+    });
+  </script>
+</body>
+</html>

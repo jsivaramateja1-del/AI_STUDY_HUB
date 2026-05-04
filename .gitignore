@@ -1,0 +1,46 @@
+# Environment variables (contains API keys, passwords)
+.env
+.env.local
+.env.*.local
+
+# Flask secret key (never share)
+secret.key
+
+# Database (contains user data)
+database.db
+*.db
+*.sqlite
+*.sqlite3
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environment
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE folders
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+
+# Distribution / build
+dist/
+build/
+*.egg-info/
+
+# Personal photos
+static/my_photo.jpg.jpeg

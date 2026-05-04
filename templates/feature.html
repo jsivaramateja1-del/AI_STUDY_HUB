@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Study Hub — {{ f.title }}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Exo+2:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/feature.css">
+</head>
+<body class="feature-page">
+  <div class="cursor-dot" id="cursorDot" aria-hidden="true"></div>
+  <div class="cursor-ring" id="cursorRing" aria-hidden="true"></div>
+
+  <div class="nc-bg" aria-hidden="true">
+    <div class="nc-grid"></div>
+    <div class="nc-blob nc-blob-1"></div>
+    <div class="nc-blob nc-blob-2"></div>
+    <div class="nc-scan"></div>
+    <div class="nc-particles"></div>
+  </div>
+
+  <div class="feature-container">
+    <!-- Hero Section -->
+    <div class="feature-hero">
+      <div class="feature-hero-grid">
+        <div class="feature-hero-content">
+          <div class="feature-badge">
+            <span class="feature-badge-emoji">{{ f.emoji }}</span>
+            <span>AI FEATURE</span>
+          </div>
+          <h1 class="feature-title">
+            <span class="feature-title-grad">{{ f.title }}</span>
+          </h1>
+          <p class="feature-tagline">{{ f.tagline }}</p>
+          <p class="feature-desc">{{ f.desc }}</p>
+          <div class="feature-buttons">
+            <a href="/signup" class="hero-btn-primary">
+              Try it Free →
+            </a>
+            <a href="/dashboard" class="hero-btn-secondary">
+              Go to Dashboard ←
+            </a>
+          </div>
+        </div>
+
+        <!-- Demo Terminal -->
+        <div class="demo-terminal">
+          <div class="terminal-header">
+            <div class="terminal-dot terminal-dot-red"></div>
+            <div class="terminal-dot terminal-dot-yellow"></div>
+            <div class="terminal-dot terminal-dot-green"></div>
+            <span class="terminal-title">AI_STUDY_HUB // {{ f.title | upper }}</span>
+          </div>
+          <div class="terminal-body">
+            {% for line in f.demo_lines %}
+              {% if line.startswith('##') or line.startswith('#') %}
+                <div class="terminal-line terminal-line-highlight">{{ line }}</div>
+              {% elif '✓' in line or 'Correct' in line %}
+                <div class="terminal-line terminal-line-success">{{ line }}</div>
+              {% elif line.startswith('•') or line.startswith('▶') %}
+                <div class="terminal-line terminal-line-highlight">{{ line }}</div>
+              {% elif line == '' %}
+                <div class="terminal-line"><br></div>
+              {% else %}
+                <div class="terminal-line">{{ line }}</div>
+              {% endif %}
+            {% endfor %}
+            <div class="terminal-line terminal-line-highlight terminal-line-cursor">
+              █<span class="terminal-cursor"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats Section -->
+    <div class="stats-grid">
+      {% for stat in f.stats %}
+      <div class="stat-card-feature">
+        <span class="stat-value">{{ stat.val }}</span>
+        <span class="stat-label">{{ stat.lbl }}</span>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- How It Works -->
+    <div class="steps-section">
+      <h2 class="section-title">How It <span class="section-title-highlight">Works</span></h2>
+      <div class="steps-grid">
+        {% for step in f.steps %}
+        <div class="step-card-feature">
+          <div class="step-number">0{{ loop.index }}</div>
+          <div class="step-icon">{{ step.icon }}</div>
+          <div class="step-title">{{ step.title }}</div>
+          <div class="step-description">{{ step.desc }}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Other Features -->
+    <div class="other-features">
+      <h2 class="section-title">Explore <span class="section-title-highlight">All Features</span></h2>
+      <div class="features-grid">
+        {% set all_features = [
+          ("summarizer", "🧠", "AI Summarizer", "Turn pages into bullet points"),
+          ("pdf", "📄", "PDF Extractor", "Upload PDFs, get study notes"),
+          ("chatbot", "🤖", "AI Chatbot", "24/7 study companion"),
+          ("quiz", "📝", "Quiz Generator", "Auto MCQs from any content"),
+          ("analyzer", "🔍", "Content Analyzer", "Keywords, difficulty & tips"),
+          ("performance", "📊", "My Performance", "Analytics and trend charts")
+        ] %}
+        {% for fid, emoji, name, desc in all_features %}
+          {% if fid != f.id %}
+          <a href="/feature/{{ fid }}" class="feature-card-link">
+            <span class="feature-card-emoji">{{ emoji }}</span>
+            <div class="feature-card-content">
+              <div class="feature-card-title">{{ name }}</div>
+              <div class="feature-card-desc">{{ desc }}</div>
+            </div>
+            <span class="feature-card-arrow">→</span>
+          </a>
+          {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- CTA Section -->
+    <div class="cta-section">
+      <h2 class="cta-title">Ready to use {{ f.title }}?</h2>
+      <p class="cta-description">Join thousands of students studying smarter with AI. Free forever — no credit card needed.</p>
+      <a href="/signup" class="cta-button">
+        Create Free Account →
+      </a>
+    </div>
+
+    <!-- Navigation -->
+    <div class="nav-buttons">
+      {% if f.prev %}
+        {% set pf = features_map[f.prev] %}
+        <a href="/feature/{{ f.prev }}" class="nav-link nav-link-prev">
+          <span class="nav-arrow">←</span>
+          <div class="nav-content">
+            <div class="nav-label">PREVIOUS</div>
+            <div class="nav-title">{{ pf.emoji }} {{ pf.title }}</div>
+          </div>
+        </a>
+      {% else %}
+        <div></div>
+      {% endif %}
+
+      {% if f.next %}
+        {% set nf = features_map[f.next] %}
+        <a href="/feature/{{ f.next }}" class="nav-link nav-link-next">
+          <div class="nav-content">
+            <div class="nav-label">NEXT</div>
+            <div class="nav-title">{{ nf.emoji }} {{ nf.title }}</div>
+          </div>
+          <span class="nav-arrow">→</span>
+        </a>
+      {% else %}
+        <div></div>
+      {% endif %}
+    </div>
+  </div>
+
+  <script src="/static/script.js"></script>
+  <script>
+    // Staggered animation for terminal lines
+    document.querySelectorAll('.terminal-line').forEach((line, index) => {
+      line.style.animationDelay = `${0.2 + index * 0.15}s`;
+    });
+  </script>
+</body>
+</html>

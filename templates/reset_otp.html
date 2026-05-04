@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Study Hub — Verify Reset OTP</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="auth-page otp-page">
+  <div class="cursor-dot"  id="cursorDot"  aria-hidden="true"></div>
+  <div class="cursor-ring" id="cursorRing" aria-hidden="true"></div>
+
+  <div class="nc-bg" aria-hidden="true">
+    <div class="nc-grid"></div>
+    <div class="nc-blob nc-blob-1"></div>
+    <div class="nc-blob nc-blob-2"></div>
+    <div class="nc-scan"></div>
+    <div class="nc-particles"></div>
+  </div>
+
+  <div class="otp-card tilt-card">
+
+    <div class="otp-icon-wrap">
+      <span class="otp-icon-inner">🔐</span>
+      <div class="otp-icon-ring"></div>
+    </div>
+
+    <h1 class="otp-heading">
+      Verify
+      <span class="otp-neon">Identity</span>
+    </h1>
+
+    <p class="otp-sub">
+      We sent a 6-digit OTP to<br>
+      <span class="otp-email-tag">{{ email }}</span><br><br>
+      Enter it below to reset your password.
+    </p>
+
+    <!-- FIX: timer starts at 3:00 not 10:00 -->
+    <div class="otp-timer-wrap">
+      <div class="otp-timer" id="otpTimer">⏱ 3:00</div>
+      <div class="otp-timer-sub" id="otpTimerSub">OTP expires in</div>
+    </div>
+
+    <div class="otp-expired-msg" id="otpExpiredMsg" role="alert">
+      ⏰ Your OTP has expired. Please request a new one below.
+    </div>
+
+    {% if success %}
+    <div class="otp-alert otp-alert--success" role="alert">
+      <span>✓</span> {{ success }}
+    </div>
+    {% endif %}
+
+    {% if error %}
+    <div class="otp-alert otp-alert--error" role="alert">
+      <span>⚠</span> {{ error }}
+    </div>
+    {% endif %}
+
+    {% if dev_otp %}
+    <div class="dev-otp-box">
+      <span>⚙ DEV MODE — Email not configured</span><br>
+      Your OTP is:
+      <strong class="dev-otp-code">{{ dev_otp }}</strong>
+    </div>
+    {% endif %}
+
+    <form action="/verify-reset-otp" method="POST" id="otpForm">
+      <input type="hidden" name="otp" id="otpHidden">
+
+      <div class="otp-inputs" role="group" aria-label="OTP digits">
+        <input type="text" class="otp-digit" maxlength="1" inputmode="numeric"
+               pattern="[0-9]" autocomplete="one-time-code" aria-label="Digit 1">
+        <input type="text" class="otp-digit" maxlength="1" inputmode="numeric"
+               pattern="[0-9]" aria-label="Digit 2">
+        <input type="text" class="otp-digit" maxlength="1" inputmode="numeric"
+               pattern="[0-9]" aria-label="Digit 3">
+        <input type="text" class="otp-digit" maxlength="1" inputmode="numeric"
+               pattern="[0-9]" aria-label="Digit 4">
+        <input type="text" class="otp-digit" maxlength="1" inputmode="numeric"
+               pattern="[0-9]" aria-label="Digit 5">
+        <input type="text" class="otp-digit" maxlength="1" inputmode="numeric"
+               pattern="[0-9]" aria-label="Digit 6">
+      </div>
+
+      <button type="submit" class="otp-verify-btn" id="verifyBtn">
+        <div class="btn-inner">
+          <span class="btn-label">Verify OTP</span>
+          <span class="btn-icon">→</span>
+          <span class="btn-ring" id="verifyRing" aria-hidden="true"></span>
+        </div>
+        <div class="btn-glow"></div>
+      </button>
+    </form>
+
+    <div class="otp-footer-actions">
+      <form action="/resend-reset-otp" method="POST" class="otp-resend-form">
+        <button type="submit" class="otp-resend-btn">↻ Resend OTP</button>
+      </form>
+      <a href="/forgot-password" class="otp-back-link">← Try different email</a>
+    </div>
+
+  </div>
+
+  <script src="/static/script.js"></script>
+  <script>
+    initOtp();
+    // FIX: 3 minutes = 180 seconds
+    startOtpTimer(180);
+  </script>
+</body>
+</html>
