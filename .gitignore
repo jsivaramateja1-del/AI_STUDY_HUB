@@ -43,4 +43,4 @@ build/
 *.egg-info/
 
 # Personal photos
-static/my_photo.jpg.jpeg
+static/my_photo.jpg

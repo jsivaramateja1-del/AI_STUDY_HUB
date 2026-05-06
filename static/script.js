@@ -905,6 +905,7 @@ async function submitQuizInteractive() {
   setTimeout(function() {
     if (interactive) interactive.classList.remove('visible');
     if (results)     results.classList.add('visible');
+    renderAnswerReview();
   }, 500);
 
   // Save score
@@ -926,6 +927,93 @@ async function submitQuizInteractive() {
       saveEl.className   = 'quiz-save-status error';
     }
   }
+}
+
+async function renderAnswerReview() {
+  var section  = document.getElementById('quizReviewSection');
+  var loading  = document.getElementById('quizReviewLoading');
+  var list     = document.getElementById('quizReviewList');
+  if (!section || !list) return;
+
+  section.style.display = 'block';
+  if (loading) loading.style.display = 'flex';
+  list.innerHTML = '';
+
+  var questions = quizState.questions;
+  var answers   = quizState.answers;
+
+  // Build prompt for Claude to explain each answer
+  var promptLines = ['For each question below, give a SHORT 1-2 sentence explanation of WHY the correct answer is right. Label each as "Q1:", "Q2:", etc.\n'];
+  questions.forEach(function(q, i) {
+    var opts = Object.keys(q.options).map(function(k) { return k + ') ' + q.options[k]; }).join(' | ');
+    promptLines.push('Q' + (i+1) + ': ' + q.question);
+    promptLines.push('Options: ' + opts);
+    promptLines.push('Correct Answer: ' + q.answer + ') ' + q.options[q.answer]);
+    promptLines.push('');
+  });
+
+  var explanations = [];
+  try {
+    var res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: promptLines.join('\n') }]
+      })
+    });
+    var data = await res.json();
+    var raw  = (data.content && data.content[0] && data.content[0].text) || '';
+    // Parse explanations split by Q1:, Q2:, etc.
+    var parts = raw.split(/Q\d+:/);
+    parts.shift();
+    parts.forEach(function(p) { explanations.push(p.trim()); });
+  } catch(e) {
+    // fallback: show without AI explanations
+  }
+
+  if (loading) loading.style.display = 'none';
+
+  questions.forEach(function(q, i) {
+    var userAns   = answers[i];
+    var isCorrect = userAns === q.answer;
+    var isSkipped = !userAns;
+
+    var card = document.createElement('div');
+    card.className = 'quiz-review-card ' + (isCorrect ? 'review-correct' : isSkipped ? 'review-skipped' : 'review-wrong');
+
+    var optionsHtml = Object.keys(q.options).map(function(letter) {
+      var cls  = '';
+      if (letter === q.answer)                 cls = 'review-opt-correct';
+      else if (letter === userAns && !isCorrect) cls = 'review-opt-wrong';
+      var mark = (letter === q.answer) ? ' ✓' : (letter === userAns && !isCorrect) ? ' ✗' : '';
+      return '<div class="review-opt ' + cls + '"><span class="review-opt-letter">' + letter + '</span>' + q.options[letter] + '<span class="review-opt-mark">' + mark + '</span></div>';
+    }).join('');
+
+    var explanation = explanations[i]
+      ? '<div class="review-explanation"><span class="review-exp-icon">💡</span><span>' + explanations[i] + '</span></div>'
+      : '';
+
+    var yourAnswerHtml = isSkipped
+      ? '<span class="review-your-ans skipped">Not answered</span>'
+      : '<span class="review-your-ans ' + (isCorrect ? 'ans-correct' : 'ans-wrong') + '">' + userAns + ') ' + q.options[userAns] + '</span>';
+
+    card.innerHTML =
+      '<div class="review-card-header">' +
+        '<span class="review-q-num">Q' + (i + 1) + '</span>' +
+        '<span class="review-status ' + (isCorrect ? 'status-correct' : isSkipped ? 'status-skipped' : 'status-wrong') + '">' +
+          (isCorrect ? '✅ Correct' : isSkipped ? '⚠️ Skipped' : '❌ Incorrect') +
+        '</span>' +
+      '</div>' +
+      '<div class="review-question">' + q.question + '</div>' +
+      '<div class="review-opts">' + optionsHtml + '</div>' +
+      '<div class="review-answer-row"><span class="review-label">Your answer:</span>' + yourAnswerHtml + '</div>' +
+      '<div class="review-answer-row"><span class="review-label">Correct answer:</span><span class="review-correct-ans">' + q.answer + ') ' + q.options[q.answer] + '</span></div>' +
+      explanation;
+
+    list.appendChild(card);
+  });
 }
 
 function showQuizError(msg) {
@@ -969,6 +1057,13 @@ function resetQuizUI() {
   if (fb)    { fb.textContent = ''; fb.className = 'quiz-feedback'; }
   if (dots)  dots.innerHTML   = '';
   if (save)  { save.textContent = ''; save.className = 'quiz-save-status'; }
+
+  var reviewSection = document.getElementById('quizReviewSection');
+  var reviewList    = document.getElementById('quizReviewList');
+  var reviewLoading = document.getElementById('quizReviewLoading');
+  if (reviewSection) reviewSection.style.display = 'none';
+  if (reviewList)    reviewList.innerHTML = '';
+  if (reviewLoading) reviewLoading.style.display = 'none';
 
   hideQuizError();
 }

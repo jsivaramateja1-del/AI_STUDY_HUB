@@ -271,6 +271,19 @@
           </div>
           <div class="quiz-save-status" id="quizSaveStatus"></div>
           <button class="quiz-retake-btn" type="button" onclick="resetQuizUI()">↺ Try Again</button>
+
+          <!-- Answer Review Section -->
+          <div class="quiz-review-section" id="quizReviewSection">
+            <div class="quiz-review-header">
+              <span class="quiz-review-icon">📖</span>
+              <h3 class="quiz-review-title">Answer Review &amp; Explanations</h3>
+            </div>
+            <div class="quiz-review-loading" id="quizReviewLoading">
+              <span class="spinner active spinner-inline"></span>
+              Generating explanations…
+            </div>
+            <div class="quiz-review-list" id="quizReviewList"></div>
+          </div>
         </div>
       </div>
     </section>
