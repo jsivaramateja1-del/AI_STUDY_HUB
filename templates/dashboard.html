@@ -4,20 +4,19 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AI Study Hub — Dashboard</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;700&family=Lexend:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body class="dash-page">
   <div class="cursor-dot" id="cursorDot" aria-hidden="true"></div>
   <div class="cursor-ring" id="cursorRing" aria-hidden="true"></div>
 
-  <div class="starfield" aria-hidden="true"></div>
-  <div class="nebula" aria-hidden="true">
-    <div class="neb-1"></div>
-    <div class="neb-3"></div>
+  <div class="nc-bg" aria-hidden="true">
+    <div class="nc-grid"></div>
+    <div class="nc-blob nc-blob-1"></div>
+    <div class="nc-blob nc-blob-2"></div>
+    <div class="nc-scan"></div>
+    <div class="nc-particles"></div>
   </div>
-  <div class="grid-overlay" aria-hidden="true"></div>
 
   <!-- SIDEBAR -->
   <nav class="sidebar" id="sidebar" aria-label="Main navigation">
@@ -346,7 +345,7 @@
     <div class="card-inner">
       <div class="card-front">
         <div class="avatar-placeholder">
-          <img src="/static/my_photo.jpg.jpeg" alt="Profile" class="avatar-img">
+          <img src="/static/my-photo.jpg" alt="Profile" class="avatar-img">
         </div>
         <h3>{{ name }}</h3>
         <p>AI Study Hub</p>

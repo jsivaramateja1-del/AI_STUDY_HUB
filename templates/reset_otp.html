@@ -36,9 +36,8 @@
       Enter it below to reset your password.
     </p>
 
-    <!-- FIX: timer starts at 3:00 not 10:00 -->
     <div class="otp-timer-wrap">
-      <div class="otp-timer" id="otpTimer">⏱ 3:00</div>
+      <div class="otp-timer" id="otpTimer">⏱ 10:00</div>
       <div class="otp-timer-sub" id="otpTimerSub">OTP expires in</div>
     </div>
 
@@ -105,9 +104,9 @@
 
   <script src="/static/script.js"></script>
   <script>
+    // FIX: only call initOtp() — it already contains the timer (600s = 10 min)
+    // Do NOT call startOtpTimer separately — that was causing the double timer bug
     initOtp();
-    // FIX: 3 minutes = 180 seconds
-    startOtpTimer(180);
   </script>
 </body>
 </html>

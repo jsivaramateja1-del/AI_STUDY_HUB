@@ -4,14 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AI Study Hub — Create Account</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Exo+2:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body class="auth-page">
-  <!-- Custom cursor -->
-  <div class="cursor-dot" id="cursorDot" aria-hidden="true"></div>
+  <div class="cursor-dot"  id="cursorDot"  aria-hidden="true"></div>
   <div class="cursor-ring" id="cursorRing" aria-hidden="true"></div>
 
-  <!-- Background -->
   <div class="nc-bg" aria-hidden="true">
     <div class="nc-grid"></div>
     <div class="nc-blob nc-blob-2"></div>
@@ -21,12 +21,13 @@
   </div>
 
   <div class="signup-wrap">
-    <!-- LEFT PANEL: steps and info -->
+
     <aside class="signup-left" aria-label="Signup steps">
       <div class="brand signup-brand">
         <div class="brand-mark"><span class="brand-icon">⚡</span></div>
         <span class="brand-name">AI_STUDY_HUB</span>
       </div>
+
       <div>
         <p class="signup-eyebrow">// NEW ACCOUNT</p>
         <h1 class="hero-h1 signup-hero-h1">
@@ -35,45 +36,47 @@
           <span class="neon-green">with AI.</span>
         </h1>
         <p class="hero-sub signup-hero-sub">
-          Free forever · No credit card · 6 AI tools ready instantly after signup.
+          Free forever · No credit card · 6 AI tools ready instantly.
         </p>
       </div>
+
       <div class="steps-block">
         <div class="step-item">
           <span class="step-num">01</span>
           <div class="step-body">
             <strong>Fill in your details</strong>
-            <p>Name, email &amp; a strong password (min. 6 characters)</p>
+            <p>Name, email &amp; password (min. 6 chars)</p>
           </div>
         </div>
         <div class="step-item">
           <span class="step-num">02</span>
           <div class="step-body">
-            <strong>Enter verification code</strong>
-            <p>6-character alphanumeric code shown below</p>
+            <strong>Solve the math captcha</strong>
+            <p>Simple maths — proves you're human</p>
           </div>
         </div>
         <div class="step-item">
           <span class="step-num">03</span>
           <div class="step-body">
-            <strong>Verify your email with OTP</strong>
-            <p>6-digit code sent instantly to your inbox</p>
+            <strong>Verify your email</strong>
+            <p>6-digit OTP sent to your inbox</p>
           </div>
         </div>
         <div class="step-item">
           <span class="step-num">04</span>
           <div class="step-body">
             <strong>Access all 6 AI tools</strong>
-            <p>Dashboard ready immediately — start learning!</p>
+            <p>Dashboard ready immediately!</p>
           </div>
         </div>
       </div>
-      <p class="sec-note">🔒 Passwords hashed · OTP verified · Alphanumeric verification</p>
+
+      <p class="sec-note">🔒 Passwords hashed · OTP verified · Captcha protected</p>
     </aside>
 
-    <!-- RIGHT PANEL: signup form -->
     <main class="signup-right">
       <div class="signup-card tilt-card holo">
+
         <p class="form-eyebrow">// NEW ACCOUNT</p>
         <h2 class="form-title-lg">Create<br>account.</h2>
 
@@ -83,53 +86,51 @@
         </div>
         {% endif %}
 
-        <form action="/register" method="POST" id="signupForm">
-          <!-- Full name -->
+        <form class="auth-form" action="/register" method="POST" id="signupForm">
+
           <div class="cyber-field">
-            <input type="text" name="name" class="cyber-input" id="regName" placeholder="name" value="{{ name or '' }}" required>
+            <input type="text" name="name" class="cyber-input" id="regName"
+                   placeholder="name" value="{{ name or '' }}" required>
             <label class="cyber-label" for="regName">Full name</label>
             <div class="cyber-line"></div>
           </div>
 
-          <!-- Email -->
           <div class="cyber-field">
-            <input type="email" name="email" class="cyber-input" id="regEmail" placeholder="email" value="{{ email or '' }}" required>
+            <input type="email" name="email" class="cyber-input" id="regEmail"
+                   placeholder="email" value="{{ email or '' }}" required>
             <label class="cyber-label" for="regEmail">Email address</label>
             <div class="cyber-line"></div>
           </div>
 
-          <!-- Password -->
           <div class="cyber-field">
-            <input type="password" name="password" class="cyber-input" id="regPw" placeholder="password" minlength="6" required>
+            <input type="password" name="password" class="cyber-input" id="regPw"
+                   placeholder="password" minlength="6" required>
             <label class="cyber-label" for="regPw">Password (min. 6 chars)</label>
             <div class="cyber-line"></div>
           </div>
 
-          <!-- VERIFICATION CODE: displayed above, input below -->
-          <div class="verification-section">
-            <div class="code-display-box">
-              <span class="code-label">Verification Code:</span>
-              <strong class="verification-code-display">{{ verification_code }}</strong>
-            </div>
-            <div class="code-input-box">
-              <input type="text" name="verification_code" class="verification-input captcha-ans-uppercase"
-                     placeholder="ENTER CODE" required autocomplete="off">
-            </div>
+          <!-- FIX: server-side math captcha — uses captcha_q from Flask -->
+          <div class="cyber-captcha">
+            <span class="captcha-q-mag">{{ captcha_q }} = ?</span>
+            <input type="number" name="captcha" class="captcha-ans"
+                   placeholder="Answer" inputmode="numeric" required>
           </div>
 
-          <!-- Submit button -->
           <button type="submit" class="cyber-btn" id="regBtn">
-            <span class="btn-label">CREATE FREE ACCOUNT</span>
+            <span class="btn-label">Create Free Account</span>
             <span class="btn-arrow">→</span>
           </button>
+
         </form>
 
         <p class="auth-switch">
           Already have an account?
           <a href="/" class="neon-link">Sign in →</a>
         </p>
+
       </div>
     </main>
+
   </div>
 
   <script src="/static/script.js"></script>
