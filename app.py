@@ -212,7 +212,13 @@ def init_db():
         user_email TEXT NOT NULL, topic TEXT NOT NULL,
         score INTEGER NOT NULL, total INTEGER NOT NULL DEFAULT 5,
         percentage REAL NOT NULL, taken_at TEXT NOT NULL,
+        questions_json TEXT DEFAULT NULL,
         FOREIGN KEY (user_email) REFERENCES users(email))""")
+    # Migrate: add questions_json column if it doesn't exist yet
+    try:
+        conn.execute("ALTER TABLE quiz_attempts ADD COLUMN questions_json TEXT DEFAULT NULL")
+    except Exception:
+        pass  # Column already exists
     conn.commit()
     conn.close()
 
@@ -740,21 +746,25 @@ Content:
 def submit_quiz_score():
     if "user" not in session:
         return jsonify({"error": "Not logged in. Please sign in to save scores."}), 401
-    data  = request.json or {}
-    score = data.get("score")
-    total = data.get("total", 5)
-    topic = data.get("topic", "General")[:80]
+    data      = request.json or {}
+    score     = data.get("score")
+    total     = data.get("total", 5)
+    topic     = data.get("topic", "General")[:80]
+    questions = data.get("questions", [])   # full Q+A data
+    answers   = data.get("answers", [])     # user's answers
     if score is None or not isinstance(score, int):
         return jsonify({"error": "Invalid score value."}), 400
     if not (0 <= score <= total):
         return jsonify({"error": "Score out of range."}), 400
     pct = round((score / total) * 100, 1)
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    # Store questions + user answers together
+    questions_json = json.dumps({"questions": questions, "answers": answers}) if questions else None
     try:
         conn = get_db()
         conn.execute(
-            "INSERT INTO quiz_attempts (user_email,topic,score,total,percentage,taken_at) VALUES (?,?,?,?,?,?)",
-            (session["user"], topic, score, total, pct, now))
+            "INSERT INTO quiz_attempts (user_email,topic,score,total,percentage,taken_at,questions_json) VALUES (?,?,?,?,?,?,?)",
+            (session["user"], topic, score, total, pct, now, questions_json))
         conn.commit(); conn.close()
         if   pct >= 80: grade, msg = "Excellent! 🏆", "Outstanding! Keep it up!"
         elif pct >= 60: grade, msg = "Good job! 👍",  "Solid work. Review what you missed."
@@ -1045,6 +1055,10 @@ def quiz_analytics():
     b64 = base64.b64encode(buf.read()).decode()
     plt.close()
 
+    # Strip large questions_json blob before sending to frontend
+    def slim(a):
+        return {k: v for k, v in a.items() if k != 'questions_json'}
+
     return jsonify({
         "empty":          False,
         "chart":          f"data:image/png;base64,{b64}",
@@ -1054,8 +1068,131 @@ def quiz_analytics():
         "worst_score":    worst_score,
         "pass_rate":      pass_rate,
         "trend":          trend,
-        "recent":         attempts[-5:][::-1]
+        "recent":         [slim(a) for a in attempts[-5:][::-1]]
     })
+
+@app.route("/quiz-attempt/<int:attempt_id>")
+def quiz_attempt_detail(attempt_id):
+    if "user" not in session:
+        return jsonify({"error": "Not logged in."}), 401
+    conn = get_db()
+    row  = conn.execute(
+        "SELECT * FROM quiz_attempts WHERE id=? AND user_email=?",
+        (attempt_id, session["user"])).fetchone()
+    conn.close()
+    if not row:
+        return jsonify({"error": "Attempt not found."}), 404
+    r = dict(row)
+    qj = r.pop("questions_json", None)
+    if qj:
+        try:
+            r["quiz_data"] = json.loads(qj)
+        except Exception:
+            r["quiz_data"] = None
+    else:
+        r["quiz_data"] = None
+    return jsonify(r)
+
+
+@app.route("/quiz-explain", methods=["POST"])
+def quiz_explain():
+    if "user" not in session:
+        return jsonify({"error": "Not logged in."}), 401
+    data = request.get_json()
+    questions = data.get("questions", [])
+    answers   = data.get("answers", [])
+    if not questions:
+        return jsonify({"error": "No questions provided."}), 400
+
+    import re
+
+    def clean_json(raw):
+        """Strip markdown fences and return clean JSON string."""
+        raw = raw.strip()
+        raw = re.sub(r'^```[a-zA-Z]*\s*', '', raw)
+        raw = re.sub(r'\s*```$', '', raw)
+        return raw.strip()
+
+    def parse_json_safe(raw):
+        """Try to parse JSON, return None on failure."""
+        try:
+            return json.loads(clean_json(raw))
+        except Exception:
+            return None
+
+    # Ask Groq for ALL questions in one call with a tight schema
+    q_lines = []
+    for i, q in enumerate(questions):
+        opts = " | ".join(f"{k}) {v}" for k, v in q.get("options", {}).items())
+        correct_letter = q.get("answer", "")
+        correct_text   = q.get("options", {}).get(correct_letter, "")
+        user_ans       = answers[i] if i < len(answers) else None
+        q_lines.append(
+            f"Q{i+1}: {q.get('question','')}\n"
+            f"Options: {opts}\n"
+            f"Correct: {correct_letter}) {correct_text}\n"
+            f"Student: {user_ans or 'skipped'}"
+        )
+
+    schema_example = json.dumps([{
+        "concept": "one sentence about what topic this tests",
+        "why_correct": "2-3 sentences explaining why the correct answer is right",
+        "why_wrong": {"A": "why A is wrong", "B": "why B is wrong"},
+        "key_takeaway": "one memorable sentence to remember"
+    }], indent=2)
+
+    prompt = (
+        f"You are a tutor. For each question below return a JSON array with {len(questions)} objects.\n"
+        f"Each object MUST have exactly these keys: concept, why_correct, why_wrong, key_takeaway.\n"
+        f"why_wrong is an object mapping WRONG option letters to one sentence each.\n"
+        f"Return ONLY the raw JSON array. No markdown. No explanation. No extra text.\n\n"
+        f"Example format:\n{schema_example}\n\n"
+        f"Questions:\n\n" + "\n\n".join(q_lines)
+    )
+
+    try:
+        raw = ask_groq(
+            prompt,
+            system="You are a JSON-only API. Output raw JSON arrays only. Never use markdown code fences.",
+            model="llama-3.3-70b-versatile"
+        )
+        explanations = parse_json_safe(raw)
+
+        # If top-level parse failed, try to extract JSON array with regex
+        if explanations is None:
+            match = re.search(r'\[.*\]', raw, re.DOTALL)
+            if match:
+                explanations = parse_json_safe(match.group(0))
+
+        # If still failed, build one-question-at-a-time as fallback
+        if explanations is None:
+            explanations = []
+            for i, q in enumerate(questions):
+                opts = " | ".join(f"{k}) {v}" for k, v in q.get("options", {}).items())
+                correct_letter = q.get("answer", "")
+                correct_text   = q.get("options", {}).get(correct_letter, "")
+                single_prompt = (
+                    f"Question: {q.get('question','')}\n"
+                    f"Options: {opts}\n"
+                    f"Correct Answer: {correct_letter}) {correct_text}\n\n"
+                    f"Return a single JSON object with keys: concept, why_correct, why_wrong, key_takeaway.\n"
+                    f"why_wrong maps each wrong letter to one sentence. Raw JSON only, no markdown."
+                )
+                try:
+                    r = ask_groq(single_prompt, system="Return only raw JSON objects. No markdown.")
+                    obj = parse_json_safe(r)
+                    if obj is None:
+                        m = re.search(r'\{.*\}', r, re.DOTALL)
+                        obj = parse_json_safe(m.group(0)) if m else None
+                    explanations.append(obj or {"why_correct": r.strip()})
+                except Exception:
+                    explanations.append({"why_correct": "Explanation unavailable."})
+
+        return jsonify({"explanations": explanations})
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 
 if __name__ == "__main__":
     app.run(debug=False)

@@ -279,7 +279,7 @@
               <h3 class="quiz-review-title">Answer Review &amp; Explanations</h3>
             </div>
             <div class="quiz-review-loading" id="quizReviewLoading">
-              <span class="spinner active spinner-inline"></span>
+              <span class="spinner active review-loading-spinner"></span>
               Generating explanations…
             </div>
             <div class="quiz-review-list" id="quizReviewList"></div>
@@ -352,6 +352,27 @@
       </div>
     </section>
   </main>
+
+  <!-- Quiz History Detail Modal -->
+  <div class="hist-modal-overlay" id="histModalOverlay" onclick="closeHistModal()"></div>
+  <div class="hist-modal" id="histModal" role="dialog" aria-modal="true" aria-label="Quiz Attempt Details">
+    <div class="hist-modal-header">
+      <div class="hist-modal-title-wrap">
+        <span class="hist-modal-icon">📋</span>
+        <div>
+          <div class="hist-modal-title" id="histModalTitle">Quiz Review</div>
+          <div class="hist-modal-meta" id="histModalMeta"></div>
+        </div>
+      </div>
+      <button class="hist-modal-close" onclick="closeHistModal()" type="button" aria-label="Close">✕</button>
+    </div>
+    <div class="hist-modal-score-bar" id="histModalScoreBar"></div>
+    <div class="hist-modal-body" id="histModalBody">
+      <div class="hist-modal-loading" id="histModalLoading">
+        <span class="spinner active"></span> Loading attempt details…
+      </div>
+    </div>
+  </div>
 
   <!-- 3D Photo Card -->
   <div class="photo-card-3d" id="photoCard3d">

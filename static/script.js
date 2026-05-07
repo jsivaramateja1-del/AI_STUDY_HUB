@@ -913,7 +913,13 @@ async function submitQuizInteractive() {
     var res  = await fetch('/submit-quiz-score', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ score: correct, total: total, topic: quizState.topic || 'General Quiz' })
+      body:    JSON.stringify({
+        score:     correct,
+        total:     total,
+        topic:     quizState.topic || 'General Quiz',
+        questions: quizState.questions,
+        answers:   quizState.answers
+      })
     });
     var data = await res.json();
     if (!res.ok || data.error) throw new Error(data.error || 'Failed to save.');
@@ -942,35 +948,25 @@ async function renderAnswerReview() {
   var questions = quizState.questions;
   var answers   = quizState.answers;
 
-  // Build prompt for Claude to explain each answer
-  var promptLines = ['For each question below, give a SHORT 1-2 sentence explanation of WHY the correct answer is right. Label each as "Q1:", "Q2:", etc.\n'];
-  questions.forEach(function(q, i) {
-    var opts = Object.keys(q.options).map(function(k) { return k + ') ' + q.options[k]; }).join(' | ');
-    promptLines.push('Q' + (i+1) + ': ' + q.question);
-    promptLines.push('Options: ' + opts);
-    promptLines.push('Correct Answer: ' + q.answer + ') ' + q.options[q.answer]);
-    promptLines.push('');
-  });
-
   var explanations = [];
   try {
-    var res = await fetch('https://api.anthropic.com/v1/messages', {
+    var res = await fetch('/quiz-explain', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        messages: [{ role: 'user', content: promptLines.join('\n') }]
+        questions: questions,
+        answers:   answers
       })
     });
     var data = await res.json();
-    var raw  = (data.content && data.content[0] && data.content[0].text) || '';
-    // Parse explanations split by Q1:, Q2:, etc.
-    var parts = raw.split(/Q\d+:/);
-    parts.shift();
-    parts.forEach(function(p) { explanations.push(p.trim()); });
+    if (data.explanations) {
+      explanations = data.explanations;
+    } else if (data.raw) {
+      // Groq returned non-JSON — show raw as fallback text per question
+      explanations = questions.map(function() { return { why_correct: data.raw }; });
+    }
   } catch(e) {
-    // fallback: show without AI explanations
+    // silently fail — cards still show correct answers without explanation
   }
 
   if (loading) loading.style.display = 'none';
@@ -991,9 +987,59 @@ async function renderAnswerReview() {
       return '<div class="review-opt ' + cls + '"><span class="review-opt-letter">' + letter + '</span>' + q.options[letter] + '<span class="review-opt-mark">' + mark + '</span></div>';
     }).join('');
 
-    var explanation = explanations[i]
-      ? '<div class="review-explanation"><span class="review-exp-icon">💡</span><span>' + explanations[i] + '</span></div>'
-      : '';
+    var exp = explanations[i] || null;
+
+    // Build explanation HTML from structured data
+    var explanationHtml = '';
+    if (exp) {
+      // Why wrong options
+      var wrongOptHtml = '';
+      if (exp.why_wrong) {
+        var wrongEntries = Object.keys(exp.why_wrong)
+          .filter(function(l) { return l !== q.answer; })
+          .map(function(l) {
+            return '<div class="review-why-wrong-item">' +
+              '<span class="review-wrong-letter">' + l + '</span>' +
+              '<span>' + exp.why_wrong[l] + '</span>' +
+            '</div>';
+          }).join('');
+        if (wrongEntries) {
+          wrongOptHtml =
+            '<div class="review-exp-row">' +
+              '<div class="review-exp-label review-exp-label--red">❌ WHY OTHERS ARE WRONG</div>' +
+              '<div class="review-why-wrong-list">' + wrongEntries + '</div>' +
+            '</div>';
+        }
+      }
+      explanationHtml =
+        '<div class="review-exp-block">' +
+          '<div class="review-exp-divider"><span>💡 Explanation</span></div>' +
+
+          (exp.concept
+            ? '<div class="review-exp-row">' +
+                '<div class="review-exp-label review-exp-label--purple">📌 CONCEPT</div>' +
+                '<div class="review-exp-text">' + exp.concept + '</div>' +
+              '</div>'
+            : '') +
+
+          (exp.why_correct
+            ? '<div class="review-exp-row">' +
+                '<div class="review-exp-label review-exp-label--cyan">✅ WHY IT\'S CORRECT</div>' +
+                '<div class="review-exp-text review-exp-text--bright">' + exp.why_correct + '</div>' +
+              '</div>'
+            : '') +
+
+          wrongOptHtml +
+
+          (exp.key_takeaway
+            ? '<div class="review-exp-row review-exp-takeaway-row">' +
+                '<div class="review-exp-label review-exp-label--green">🔑 KEY TAKEAWAY</div>' +
+                '<div class="review-exp-text review-exp-text--green">' + exp.key_takeaway + '</div>' +
+              '</div>'
+            : '') +
+
+        '</div>';
+    }
 
     var yourAnswerHtml = isSkipped
       ? '<span class="review-your-ans skipped">Not answered</span>'
@@ -1010,12 +1056,10 @@ async function renderAnswerReview() {
       '<div class="review-opts">' + optionsHtml + '</div>' +
       '<div class="review-answer-row"><span class="review-label">Your answer:</span>' + yourAnswerHtml + '</div>' +
       '<div class="review-answer-row"><span class="review-label">Correct answer:</span><span class="review-correct-ans">' + q.answer + ') ' + q.options[q.answer] + '</span></div>' +
-      explanation;
-
+      explanationHtml;
     list.appendChild(card);
   });
 }
-
 function showQuizError(msg) {
   var el = document.getElementById('quiz-error');
   if (el) { el.textContent = '⚠ ' + msg; el.classList.add('visible'); }
@@ -1166,10 +1210,16 @@ async function loadAnalytics() {
           var lbl   = pct >= 80 ? 'Excellent' : pct >= 60 ? 'Good' : pct >= 40 ? 'Average' : 'Needs Work';
           var topic = r.topic.length > 30 ? r.topic.slice(0, 30) + '…' : r.topic;
           var date  = r.taken_at ? r.taken_at.slice(0, 10) : '—';
+          var hasDetail = !!r.id;
           var tr    = document.createElement('tr');
+          tr.className = hasDetail ? 'recent-row-clickable' : '';
+          if (hasDetail) {
+            tr.title = 'Click to review this attempt';
+            tr.addEventListener('click', function() { openHistModal(r.id, r.topic, r.score, r.total, pct, r.taken_at); });
+          }
           tr.innerHTML =
             '<td>' + (i+1) + '</td>' +
-            '<td title="' + r.topic + '">' + topic + '</td>' +
+            '<td title="' + r.topic + '">' + topic + (hasDetail ? ' <span class="hist-row-hint">🔍</span>' : '') + '</td>' +
             '<td>' + r.score + '/' + r.total + '</td>' +
             '<td><strong>' + pct + '%</strong></td>' +
             '<td>' + date + '</td>' +
@@ -1190,6 +1240,158 @@ async function loadAnalytics() {
     setLoading('analytics-btn', 'analytics-spin', false);
   }
 }
+
+/* ══════════════════════════════════════════════════════════
+   QUIZ HISTORY MODAL
+══════════════════════════════════════════════════════════ */
+function closeHistModal() {
+  var overlay = document.getElementById('histModalOverlay');
+  var modal   = document.getElementById('histModal');
+  if (overlay) overlay.classList.remove('visible');
+  if (modal)   modal.classList.remove('visible');
+  document.body.style.overflow = '';
+}
+
+async function openHistModal(attemptId, topic, score, total, pct, takenAt) {
+  var overlay = document.getElementById('histModalOverlay');
+  var modal   = document.getElementById('histModal');
+  var title   = document.getElementById('histModalTitle');
+  var meta    = document.getElementById('histModalMeta');
+  var scoreBar = document.getElementById('histModalScoreBar');
+  var body    = document.getElementById('histModalBody');
+  var loading = document.getElementById('histModalLoading');
+
+  if (!modal) return;
+
+  // Set header info
+  if (title) title.textContent = topic;
+  if (meta)  meta.textContent  = (takenAt ? takenAt.slice(0, 10) : '') + '  ·  ' + score + '/' + total + '  ·  ' + pct + '%';
+
+  // Score bar color
+  var barColor = pct >= 80 ? '#39ff14' : pct >= 60 ? '#00e5ff' : pct >= 50 ? '#ffaa00' : '#ff4d6d';
+  if (scoreBar) {
+    scoreBar.innerHTML =
+      '<div class="hist-score-fill" style="width:' + pct + '%;background:' + barColor + '"></div>' +
+      '<span class="hist-score-pct" style="color:' + barColor + '">' + pct + '%</span>';
+  }
+
+  // Show modal
+  if (overlay) overlay.classList.add('visible');
+  modal.classList.add('visible');
+  document.body.style.overflow = 'hidden';
+
+  // Reset body
+  if (body)    body.innerHTML = '';
+  if (loading) { loading.style.display = 'flex'; body.appendChild(loading); }
+
+  try {
+    var res  = await fetch('/quiz-attempt/' + attemptId);
+    // Guard: if server returns HTML (error page), res.json() throws "Unexpected token <"
+    var text = await res.text();
+    var data;
+    try {
+      data = JSON.parse(text);
+    } catch(parseErr) {
+      throw new Error('Server error — could not load attempt (status ' + res.status + ')');
+    }
+    if (data.error) throw new Error(data.error);
+
+    var quizData  = data.quiz_data;
+    if (loading) loading.style.display = 'none';
+
+    if (!quizData || !quizData.questions || !quizData.questions.length) {
+      body.innerHTML = '<div class="hist-no-data">📭 No question data saved for this attempt.<br><small>Only attempts taken after the update include full review.</small></div>';
+      return;
+    }
+
+    var questions = quizData.questions;
+    var answers   = quizData.answers || [];
+
+    // Render question cards immediately (no explanation yet)
+    renderHistCards(body, questions, answers, []);
+
+    // Fetch explanations
+    var expRes  = await fetch('/quiz-explain', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ questions: questions, answers: answers })
+    });
+    var expData = await expRes.json();
+    var explanations = expData.explanations || [];
+
+    // Re-render with explanations
+    body.innerHTML = '';
+    renderHistCards(body, questions, answers, explanations);
+
+  } catch(e) {
+    if (loading) loading.style.display = 'none';
+    body.innerHTML = '<div class="hist-no-data">⚠ ' + e.message + '</div>';
+  }
+}
+
+function renderHistCards(container, questions, answers, explanations) {
+  questions.forEach(function(q, i) {
+    var userAns   = answers[i] || null;
+    var isCorrect = userAns === q.answer;
+    var isSkipped = !userAns;
+    var exp       = explanations[i] || null;
+
+    var card = document.createElement('div');
+    card.className = 'quiz-review-card ' + (isCorrect ? 'review-correct' : isSkipped ? 'review-skipped' : 'review-wrong');
+
+    var optionsHtml = Object.keys(q.options || {}).map(function(letter) {
+      var cls  = letter === q.answer ? 'review-opt-correct' : (letter === userAns && !isCorrect) ? 'review-opt-wrong' : '';
+      var mark = letter === q.answer ? ' ✓' : (letter === userAns && !isCorrect) ? ' ✗' : '';
+      return '<div class="review-opt ' + cls + '"><span class="review-opt-letter">' + letter + '</span>' + q.options[letter] + '<span class="review-opt-mark">' + mark + '</span></div>';
+    }).join('');
+
+    var yourAnswerHtml = isSkipped
+      ? '<span class="review-your-ans skipped">Not answered</span>'
+      : '<span class="review-your-ans ' + (isCorrect ? 'ans-correct' : 'ans-wrong') + '">' + userAns + ') ' + (q.options[userAns] || '') + '</span>';
+
+    var explanationHtml = '';
+    if (exp) {
+      var wrongOptHtml = '';
+      if (exp.why_wrong) {
+        var wrongEntries = Object.keys(exp.why_wrong)
+          .filter(function(l) { return l !== q.answer; })
+          .map(function(l) {
+            return '<div class="review-why-wrong-item"><span class="review-wrong-letter">' + l + '</span><span>' + exp.why_wrong[l] + '</span></div>';
+          }).join('');
+        if (wrongEntries) {
+          wrongOptHtml = '<div class="review-exp-row"><div class="review-exp-label review-exp-label--red">❌ WHY OTHERS ARE WRONG</div><div class="review-why-wrong-list">' + wrongEntries + '</div></div>';
+        }
+      }
+      explanationHtml =
+        '<div class="review-exp-block">' +
+          '<div class="review-exp-divider"><span>💡 Explanation</span></div>' +
+          (exp.concept    ? '<div class="review-exp-row"><div class="review-exp-label review-exp-label--purple">📌 CONCEPT</div><div class="review-exp-text">' + exp.concept + '</div></div>' : '') +
+          (exp.why_correct ? '<div class="review-exp-row"><div class="review-exp-label review-exp-label--cyan">✅ WHY IT\'S CORRECT</div><div class="review-exp-text review-exp-text--bright">' + exp.why_correct + '</div></div>' : '') +
+          wrongOptHtml +
+          (exp.key_takeaway ? '<div class="review-exp-row review-exp-takeaway-row"><div class="review-exp-label review-exp-label--green">🔑 KEY TAKEAWAY</div><div class="review-exp-text review-exp-text--green">' + exp.key_takeaway + '</div></div>' : '') +
+        '</div>';
+    }
+
+    card.innerHTML =
+      '<div class="review-card-header">' +
+        '<span class="review-q-num">Q' + (i + 1) + '</span>' +
+        '<span class="review-status ' + (isCorrect ? 'status-correct' : isSkipped ? 'status-skipped' : 'status-wrong') + '">' +
+          (isCorrect ? '✅ Correct' : isSkipped ? '⚠️ Skipped' : '❌ Incorrect') +
+        '</span>' +
+      '</div>' +
+      '<div class="review-question">' + q.question + '</div>' +
+      '<div class="review-opts">' + optionsHtml + '</div>' +
+      '<div class="review-answer-row"><span class="review-label">Your answer:</span>' + yourAnswerHtml + '</div>' +
+      '<div class="review-answer-row"><span class="review-label">Correct answer:</span><span class="review-correct-ans">' + q.answer + ') ' + q.options[q.answer] + '</span></div>' +
+      explanationHtml;
+
+    container.appendChild(card);
+  });
+}
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeHistModal();
+});
 
 /* ══════════════════════════════════════════════════════════
    CUSTOM CURSOR
