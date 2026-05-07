@@ -374,12 +374,12 @@
     </div>
   </div>
 
-  <!-- 3D Photo Card -->
+  <!-- 3D Profile Card -->
   <div class="photo-card-3d" id="photoCard3d">
     <div class="card-inner">
       <div class="card-front">
-        <div class="avatar-placeholder">
-          <img src="/static/my-photo.jpg" alt="Profile" class="avatar-img">
+        <div class="avatar-placeholder" style="display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#00f5ff,#ff0080);font-family:'Orbitron',monospace;font-size:2rem;font-weight:900;color:#050508;">
+          {{ name[0]|upper }}
         </div>
         <h3>{{ name }}</h3>
         <p>AI Study Hub</p>

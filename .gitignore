@@ -1,47 +1,34 @@
-# Environment variables (contains API keys, passwords)
+# Environment & secrets — NEVER commit these
 .env
-.env.local
-.env.*.local
-
-# Flask secret key (never share)
 secret.key
 
-# Database (contains user data)
+# Runtime database
 database.db
-*.db
-*.sqlite
-*.sqlite3
+
+# Personal photos / private media
+static/my-photo.jpg
+static/*.jpg
+static/*.jpeg
+static/*.png
 
 # Python cache
 __pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
 
-# Virtual environment
+# Virtual environments
 venv/
 env/
+.venv/
 ENV/
-env.bak/
-venv.bak/
 
-# IDE folders
+# IDE & OS files
 .vscode/
 .idea/
-*.swp
-*.swo
-*~
 .DS_Store
+Thumbs.db
 
 # Logs
 *.log
-
-# Distribution / build
-dist/
-build/
-*.egg-info/
-
-# Personal photos
-static/my-photo.jpg"static/my-photo.jpg" 
-"static/my-photo.jpg" 
