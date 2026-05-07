@@ -3290,3 +3290,13 @@ body {
   opacity: 0.5;
   margin-left: 4px;
 }
+.avatar-letter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #00f5ff, #ff0080);
+  font-family: 'Orbitron', monospace;
+  font-size: 2rem;
+  font-weight: 900;
+  color: #050508;
+}
