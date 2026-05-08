@@ -475,13 +475,14 @@ async function generateQuizFromFileWithInstruction(file, instruction, win) {
     if (!questions.length) throw new Error('Could not parse quiz. Please try again.');
     var quizNavBtn = document.querySelector('.nav-btn[onclick*="quiz"]');
     showTool('quiz', quizNavBtn);
+    // FIX: resetQuizUI FIRST (it wipes quizState), THEN set state, THEN render
+    resetQuizUI();
     quizState.questions = questions;
     quizState.answers   = new Array(questions.length).fill(null);
     quizState.current   = 0;
     quizState.submitted = false;
     quizState.topic     = data.topic || file.name;
     quizState.timePerQ  = 0;
-    resetQuizUI();
     renderQuizQuestion(0);
     var interactive = document.getElementById('quizInteractive');
     if (interactive) interactive.classList.add('visible');
